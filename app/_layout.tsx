@@ -1,29 +1,47 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
-import 'react-native-reanimated';
+import AuthProvider, { useAuth } from "@/context/AuthContext";
+import { SplashScreen, Stack, useRouter, useSegments } from "expo-router";
+import { StatusBar } from "react-native";
+import "./globals.css";
+import { useEffect } from "react";
 
-import { useColorScheme } from '@/hooks/useColorScheme';
+// Prevent the splash screen from auto-hiding before asset loading is complete.
+SplashScreen.preventAutoHideAsync();
 
-export default function RootLayout() {
-  const colorScheme = useColorScheme();
-  const [loaded] = useFonts({
-    SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
-  });
+const InitialLayout = () => {
+  const { user, loading } = useAuth();
+  const segments = useSegments();
+  const router = useRouter();
 
-  if (!loaded) {
-    // Async font loading only occurs in development.
-    return null;
-  }
+  useEffect(() => {
+    if (loading) return;
+
+    const inAuthGroup = segments[0] === "auth";
+
+    if (user && inAuthGroup) {
+      router.replace("/(tabs)");
+    } else if (!user && !inAuthGroup) {
+      router.replace("/auth/Login");
+    }
+
+    if (!loading) {
+        SplashScreen.hideAsync();
+    }
+  }, [user, loading]);
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="+not-found" />
-      </Stack>
-      <StatusBar style="auto" />
-    </ThemeProvider>
+    <Stack
+      screenOptions={{
+        headerShown: false,
+      }}
+    />
+  );
+};
+
+export default function RootLayout() {
+  return (
+    <AuthProvider>
+      <StatusBar hidden={true} />
+      <InitialLayout />
+    </AuthProvider>
   );
 }
